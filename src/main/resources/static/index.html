@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Estoque - UniFECAF</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 30px; color: #333; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #1a73e8; text-align: center; margin-bottom: 30px; }
+        
+        .search-container { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 25px; 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 8px;
+        }
+        
+        input { padding: 12px; border: 1px solid #ddd; border-radius: 5px; flex: 1; font-size: 16px; }
+        
+        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-search { background: #1a73e8; color: white; }
+        .btn-search:hover { background: #1557b0; }
+        .btn-clear { background: #6c757d; color: white; }
+        .btn-delete { background: #dc3545; color: white; padding: 6px 12px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { background-color: #f1f3f4; color: #5f6368; text-transform: uppercase; font-size: 11px; }
+        tr:hover { background-color: #f8f9fa; }
+        .status-badge { background: #e6f4ea; color: #1e8e3e; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚗 Gestão de Estoque Automotivo</h1>
+
+    <div class="search-container">
+        <input type="text" id="campoBusca" placeholder="Filtrar por marca, modelo, cor, ano ou status...">
+        <button class="btn-search" onclick="filtrar()">Buscar</button>
+        <button class="btn-clear" onclick="limparBusca()">Limpar</button>
+    </div>
+
+    <table id="tabela-veiculos">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Modelo</th>
+                <th>Marca</th>
+                <th>Ano</th>
+                <th>Cor</th>
+                <th>KM</th>
+                <th>Preço</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
+</div>
+
+<script>
+    const URL_API = 'http://localhost:8080/api/veiculos';
+
+    // Função para renderizar a tabela (centralizada para evitar erros)
+    function renderizar(veiculos) {
+        const corpo = document.querySelector('#tabela-veiculos tbody');
+        corpo.innerHTML = '';
+        if (veiculos.length === 0) {
+            corpo.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum veículo encontrado.</td></tr>';
+            return;
+        }
+        veiculos.forEach(v => {
+            corpo.innerHTML += `
+                <tr>
+                    <td>${v.id}</td>
+                    <td><strong>${v.modelo}</strong></td>
+                    <td>${v.marca}</td>
+                    <td>${v.ano}</td>
+                    <td>${v.cor}</td>
+                    <td>${(v.quilometragem || 0).toLocaleString()} km</td>
+                    <td>R$ ${(v.preco || 0).toLocaleString('pt-BR')}</td>
+                    <td><span class="status-badge">${v.status}</span></td>
+                    <td><button class="btn-delete" onclick="excluir(${v.id})">Excluir</button></td>
+                </tr>`;
+        });
+    }
+
+    // Carrega todos os veículos
+    function carregarTodos() {
+        fetch(URL_API)
+            .then(res => res.json())
+            .then(dados => renderizar(dados))
+            .catch(err => console.error("Erro ao carregar:", err));
+    }
+
+    // Filtro Inteligente
+    function filtrar() {
+        const termo = document.getElementById('campoBusca').value.toLowerCase();
+        fetch(URL_API)
+            .then(res => res.json())
+            .then(dados => {
+                const filtrados = dados.filter(v => 
+                    (v.modelo && v.modelo.toLowerCase().includes(termo)) ||
+                    (v.marca && v.marca.toLowerCase().includes(termo)) ||
+                    (v.cor && v.cor.toLowerCase().includes(termo)) ||
+                    (v.status && v.status.toLowerCase().includes(termo)) ||
+                    (v.ano && v.ano.toString().includes(termo))
+                );
+                renderizar(filtrados);
+            });
+    }
+
+    function limparBusca() {
+        document.getElementById('campoBusca').value = '';
+        carregarTodos();
+    }
+
+    function excluir(id) {
+        if(confirm('Deseja remover este veículo do estoque?')) {
+            fetch(`${URL_API}/${id}`, { method: 'DELETE' })
+                .then(() => carregarTodos());
+        }
+    }
+
+    // GARANTE QUE CARREGA AO ABRIR A PÁGINA
+    window.onload = carregarTodos;
+</script>
+
+</body>
+</html>
